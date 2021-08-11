@@ -4,7 +4,9 @@
             <pattern>%r [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-
+<!--
+%r is the amount of milliseconds since the application started.
+-->
     <root level="debug">
         <appender-ref ref="STDOUT" />
     </root>

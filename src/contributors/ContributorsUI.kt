@@ -65,7 +65,7 @@ class ContributorsUI : JFrame("GitHub Contributors"), Contributors {
             log.info("Updating result with ${users.size} rows")
         }
         else {
-            log.info("Clearing result")
+            log.info("============================== Clearing result ===============================")
         }
         resultsModel.setDataVector(users.map {
             arrayOf(it.login, it.contributions)

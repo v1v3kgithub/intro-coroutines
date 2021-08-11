@@ -16,7 +16,11 @@ fun logRepos(req: RequestData, response: Response<List<Repo>>) {
         log.error("Failed loading repos for ${req.org} with response: '${response.code()}: ${response.message()}'")
     }
     else {
-        log.info("${req.org}: loaded ${repos.size} repos")
+        val repoNames = StringBuilder().append(":")
+        repos.forEach { repoNames.append(it.name).append(",") }
+        log.info("${req.org}: loaded ${repos.size} repos;  $repoNames");
+        log.info("${req.org}: Repo Names;  $repoNames");
+        log.info("=================================================");
     }
 }
 
