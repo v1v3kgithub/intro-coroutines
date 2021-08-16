@@ -3,7 +3,6 @@ package contributors
 import contributors.Contributors.LoadingStatus.*
 import contributors.Variant.*
 import kotlinx.coroutines.*
-import kotlinx.coroutines.swing.Swing
 import tasks.*
 import java.awt.event.ActionListener
 import javax.swing.SwingUtilities
@@ -14,6 +13,7 @@ enum class Variant {
     BACKGROUND,       // Request2Background
     CALLBACKS,        // Request3Callbacks
     SUSPEND,          // Request4Coroutine
+    ASYNC_NON_UI_THREAD,       // Request4_1
     CONCURRENT,       // Request5Concurrent
     NOT_CANCELLABLE,  // Request6NotCancellable
     PROGRESS,         // Request6Progress
@@ -74,15 +74,24 @@ interface Contributors: CoroutineScope {
             }
             SUSPEND -> { // Using coroutines
 
-                launch {
+                launch { // This is running on the UI thread
                     val users = loadContributorsSuspend(service, req)
                     updateResults(users, startTime)
                 }.setUpCancellation()
             }
-            CONCURRENT -> { // Performing requests concurrently
+            ASYNC_NON_UI_THREAD -> { // Perform the call using coroutines but on a non ui thread
                 launch {
-                    val users = loadContributorsConcurrent(service, req)
+                    // This running on the UI thread
+                    val users = loadContributorsAsyncNonUIThread(service, req)
                     updateResults(users, startTime)
+                }.setUpCancellation()
+            }
+            CONCURRENT -> { // Performing requests concurrently
+                launch(Dispatchers.Default) {
+                    val users = loadContributorsConcurrent(service, req)
+                    withContext(Dispatchers.Main) {
+                        updateResults(users, startTime)
+                    }
                 }.setUpCancellation()
             }
             NOT_CANCELLABLE -> { // Performing requests in a non-cancellable way
@@ -93,9 +102,13 @@ interface Contributors: CoroutineScope {
             }
             PROGRESS -> { // Showing progress
                 launch(Dispatchers.Default) {
-                    loadContributorsProgress(service, req) { users, completed ->
-                        withContext(Dispatchers.Main) {
-                            updateResults(users, startTime, completed)
+                    // Use the default Dispatcher for processing (Default dispatcher is has a fixed threadpool)
+                    loadContributorsProgress(service, req)
+                        // The logic to update the status is passed in as a callback so that it can be repeatedly called as the results come in
+                        { users, completed ->
+                                withContext(Dispatchers.Main) {
+                                // Update the UI in the Main Context/Dispatcher, since this is a UI application the main context is the EventThread
+                                updateResults(users, startTime, completed)
                         }
                     }
                 }.setUpCancellation()
